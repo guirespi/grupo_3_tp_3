@@ -54,9 +54,6 @@
 
 /********************** external data declaration *****************************/
 
-SemaphoreHandle_t hsem_button;
-SemaphoreHandle_t hsem_led;
-
 ao_led_handle_t ao_led_r;
 ao_led_handle_t ao_led_g;
 ao_led_handle_t ao_led_b;
@@ -64,41 +61,28 @@ ao_led_handle_t ao_led_b;
 ao_ui_handle_t ao_ui;
 
 /********************** external functions definition ************************/
-void app_init(void) {
-	// Create and give the semaphore created as freeRTOS creates them as 'empty' state.
-	hsem_button = xSemaphoreCreateBinary();
-	while (NULL == hsem_button) {
+void app_init(void)
+{
+    BaseType_t status;
 
-	}
-	xSemaphoreGive(hsem_button);
+    // Initialize user interface
+    ao_ui_init(&ao_ui);
+    // Initialize 'n' AO_leds
+    ao_led_init(&ao_led_r, LED_RED_PORT, LED_RED_PIN);
+    ao_led_init(&ao_led_g, LED_GREEN_PORT, LED_GREEN_PIN);
+    ao_led_init(&ao_led_b, LED_BLUE_PORT, LED_BLUE_PIN);
 
-	hsem_led = xSemaphoreCreateBinary();
-	while (NULL == hsem_led) {
+    // Create task button
+    status = xTaskCreate(task_button, "task_button", 128, NULL, tskIDLE_PRIORITY + 3, NULL);
 
-	}
-	xSemaphoreGive(hsem_led);
+    while (pdPASS != status)
+    {
+        // error
+    }
 
-	BaseType_t status;
+    LOGGER_INFO("Application initialized");
 
-	// Create task button
-	status = xTaskCreate(task_button, "task_button", 128, NULL,
-			tskIDLE_PRIORITY + 3, NULL);
-	while (pdPASS != status) {
-		// error
-	}
-
-	//  Initialize user interface
-	ao_ui_init(&ao_ui);
-
-	// Initialize 'n' AO_leds
-	ao_led_init(&ao_led_r, LED_RED_PORT, LED_RED_PIN);
-	ao_led_init(&ao_led_g, LED_GREEN_PORT, LED_GREEN_PIN);
-	ao_led_init(&ao_led_b, LED_BLUE_PORT, LED_BLUE_PIN);
-
-
-	LOGGER_INFO("Application initialized");
-
-	cycle_counter_init();
+    cycle_counter_init();
 }
 
 /********************** end of file ******************************************/

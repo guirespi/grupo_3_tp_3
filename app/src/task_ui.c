@@ -49,7 +49,7 @@
 
 /********************** macros and definitions *******************************/
 
-#define AO_UI_QUEUE_LENGTH_ (3)
+#define AO_UI_QUEUE_LENGTH_    (3)
 #define AO_UI_QUEUE_ITEM_SIZE_ (sizeof(ao_ui_message_t))
 
 /********************** internal data declaration ****************************/
@@ -60,9 +60,6 @@
 
 /********************** external data definition *****************************/
 
-extern SemaphoreHandle_t hsem_button;
-extern SemaphoreHandle_t hsem_led;
-
 extern ao_led_handle_t ao_led_r;
 extern ao_led_handle_t ao_led_b;
 extern ao_led_handle_t ao_led_g;
@@ -71,55 +68,53 @@ extern ao_led_handle_t ao_led_g;
 
 /********************** external functions definition ************************/
 
-void task_ui(void *argument) {
-	ao_ui_handle_t *hao = (ao_ui_handle_t*) argument;
-	LOGGER_INFO("User interface for led activate");
-	while (true) {
-		ao_ui_message_t ao_message;
-		if (pdTRUE
-				== xQueueReceive(hao->hqueue, (void*) &ao_message,
-						portMAX_DELAY)) {
-			// Avoid two press events for UI process at the same time.
-			if (pdTRUE == xSemaphoreTake(hsem_button, portMAX_DELAY))
-				;
-
-			switch (ao_message) {
-			case AO_UI_PRESS_PULSE:
-				ao_led_send(&ao_led_r, AO_LED_MESSAGE_ON);
-				break;
-			case AO_UI_PRESS_SHORT:
-				ao_led_send(&ao_led_g, AO_LED_MESSAGE_ON);
-				break;
-			case AO_UI_PRESS_LONG:
-				ao_led_send(&ao_led_b, AO_LED_MESSAGE_ON);
-				break;
-			default:
-				LOGGER_INFO("Unknown event for UI object")
-				;
-				break;
-			}
-
-			xSemaphoreGive(hsem_button);
-		}
-	}
+void task_ui(void *argument)
+{
+    ao_ui_handle_t *hao = (ao_ui_handle_t *)argument;
+    LOGGER_INFO("User interface for led activate");
+    while (true)
+    {
+        ao_ui_message_t ao_message;
+        if (pdTRUE == xQueueReceive(hao->hqueue, (void *)&ao_message, portMAX_DELAY))
+        {
+            switch (ao_message)
+            {
+            case AO_UI_PRESS_PULSE:
+                ao_led_send(&ao_led_r, AO_LED_MESSAGE_BLINK);
+                break;
+            case AO_UI_PRESS_SHORT:
+                ao_led_send(&ao_led_g, AO_LED_MESSAGE_BLINK);
+                break;
+            case AO_UI_PRESS_LONG:
+                ao_led_send(&ao_led_b, AO_LED_MESSAGE_BLINK);
+                break;
+            default:
+                LOGGER_INFO("Unknown event for UI object");
+                break;
+            }
+        }
+    }
 }
 
-bool ao_ui_send(ao_ui_handle_t *hao, ao_ui_message_t msg) {
-	return (pdPASS == xQueueSend(hao->hqueue, (void* )&msg, 0));
+bool ao_ui_send(ao_ui_handle_t *hao, ao_ui_message_t msg)
+{
+    return (pdPASS == xQueueSend(hao->hqueue, (void *)&msg, 0));
 }
 
-void ao_ui_init(ao_ui_handle_t *hao) {
-	hao->hqueue = xQueueCreate(AO_UI_QUEUE_LENGTH_, AO_UI_QUEUE_ITEM_SIZE_);
-	while (NULL == hao->hqueue) {
-		// error
-	}
+void ao_ui_init(ao_ui_handle_t *hao)
+{
+    hao->hqueue = xQueueCreate(AO_UI_QUEUE_LENGTH_, AO_UI_QUEUE_ITEM_SIZE_);
+    while (NULL == hao->hqueue)
+    {
+        // error
+    }
 
-	BaseType_t status;
-	status = xTaskCreate(task_ui, "task_ao_ui", 128, (void* const ) hao,
-	tskIDLE_PRIORITY + 2, NULL);
-	while (pdPASS != status) {
-		// error
-	}
+    BaseType_t status;
+    status = xTaskCreate(task_ui, "task_ao_ui", 128, (void * const)hao, tskIDLE_PRIORITY + 2, NULL);
+    while (pdPASS != status)
+    {
+        // error
+    }
 }
 
 /********************** end of file ******************************************/

@@ -54,6 +54,7 @@ typedef enum
 {
   AO_LED_MESSAGE_ON,
   AO_LED_MESSAGE_OFF,
+  AO_LED_MESSAGE_BLINK,
   AO_LED_MESSAGE__N,
 } ao_led_message_t;
 
