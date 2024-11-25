@@ -60,9 +60,7 @@
 
 /********************** external data definition *****************************/
 
-extern ao_led_handle_t ao_led_r;
-extern ao_led_handle_t ao_led_b;
-extern ao_led_handle_t ao_led_g;
+extern ao_led_handle_t ao_led;
 
 /********************** internal functions definition ************************/
 
@@ -79,14 +77,17 @@ void task_ui(void *argument)
         {
             switch (ao_message)
             {
+            // Highest priority.
             case AO_UI_PRESS_PULSE:
-                ao_led_send(&ao_led_r, AO_LED_MESSAGE_BLINK);
+                ao_led_send(&ao_led, AO_LED_MESSAGE_PULSE);
                 break;
+            // Medium priority.
             case AO_UI_PRESS_SHORT:
-                ao_led_send(&ao_led_g, AO_LED_MESSAGE_BLINK);
+                ao_led_send(&ao_led, AO_LED_MESSAGE_SHORT);
                 break;
+            // Lowest priority.
             case AO_UI_PRESS_LONG:
-                ao_led_send(&ao_led_b, AO_LED_MESSAGE_BLINK);
+                ao_led_send(&ao_led, AO_LED_MESSAGE_LONG);
                 break;
             default:
                 LOGGER_INFO("Unknown event for UI object");
