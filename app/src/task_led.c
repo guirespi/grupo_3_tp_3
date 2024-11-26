@@ -48,9 +48,9 @@
 
 /********************** macros and definitions *******************************/
 
-#define QUEUE_LENGTH_     (3)
-#define QUEUE_ITEM_SIZE_  (sizeof(ao_led_message_t))
-#define AO_LED_BLINK_TIME (1000) /*< milliseconds */
+#define QUEUE_LENGTH_     	(10)
+#define AO_LED_ON_TIME 		(5000) /*< milliseconds */
+#define TASK_PERIOD_MS_     (100)
 
 /********************** internal data declaration ****************************/
 
@@ -62,30 +62,53 @@
 
 /********************** internal functions definition ************************/
 
-static void task_led(void *argument)
+static void ao_led_turn_on(GPIO_TypeDef * led_port, uint16_t led_num, uint32_t duration)
 {
     TickType_t       xLastWakeTime;
+    xLastWakeTime = xTaskGetTickCount();
+    // Turn on led
+	HAL_GPIO_WritePin(led_port, led_num, GPIO_PIN_SET);
+	// Blink until
+    vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(AO_LED_ON_TIME));
+    // Turn off led
+    HAL_GPIO_WritePin(led_port, led_num, GPIO_PIN_RESET);
+}
+
+static void task_led(void *argument)
+{
     ao_led_handle_t *hao = (ao_led_handle_t *)argument;
     LOGGER_INFO("AO led task initialized");
 
-    // Initialise the xLastWakeTime variable with the current time.
-
     while (true)
     {
-        ao_led_message_t msg;
-        if (pdPASS == xQueueReceive(hao->hqueue, &msg, portMAX_DELAY))
+        int temp;
+        if (true == priority_queue_receive(hao->hqueue,(int *) &temp))
         {
-            if (AO_LED_MESSAGE_BLINK == msg)
+        	ao_led_message_t msg = (ao_led_message_t) temp;
+        	uint16_t led_num = 0;
+        	GPIO_TypeDef * led_port = NULL;
+            if (AO_LED_MESSAGE_PULSE == msg)
             {
-                LOGGER_INFO("New led blinking");
-                // Toogle 1 second on then off until new event for this AO led.
-                xLastWakeTime = xTaskGetTickCount();
-                HAL_GPIO_WritePin((GPIO_TypeDef *)hao->led_port, (uint16_t)hao->led_pin, GPIO_PIN_SET);
-                // Blink until
-                vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(AO_LED_BLINK_TIME));
-                HAL_GPIO_WritePin((GPIO_TypeDef *)hao->led_port, (uint16_t)hao->led_pin, GPIO_PIN_RESET);
+                LOGGER_INFO("Triggered red led");
+                led_port = (GPIO_TypeDef *) LED_RED_PORT;
+                led_num =  LED_RED_PIN;
             }
+            if (AO_LED_MESSAGE_SHORT == msg)
+            {
+                LOGGER_INFO("Triggered green led");
+                led_port = (GPIO_TypeDef *) LED_GREEN_PORT;
+                led_num =  LED_GREEN_PIN;
+            }
+            if (AO_LED_MESSAGE_LONG == msg)
+            {
+                LOGGER_INFO("Triggered blue led");
+                led_port = (GPIO_TypeDef *) LED_BLUE_PORT;
+                led_num =  LED_BLUE_PIN;
+            }
+            ao_led_turn_on(led_port, led_num, AO_LED_ON_TIME);
         }
+        // As our priority queue implementation does not block. We make this blocking delay for this task.
+        vTaskDelay(pdMS_TO_TICKS(TASK_PERIOD_MS_));
     }
 }
 
@@ -93,23 +116,19 @@ static void task_led(void *argument)
 
 bool ao_led_send(ao_led_handle_t *hao, ao_led_message_t msg)
 {
-    return (pdPASS == xQueueSend(hao->hqueue, (void *)&msg, 0));
+    return (true == priority_queue_send(hao->hqueue, (int)msg));
 }
 
-void ao_led_init(ao_led_handle_t *hao, GPIO_TypeDef *led_port, uint16_t led_pin)
+void ao_led_init(ao_led_handle_t *hao)
 {
-    hao->hqueue = xQueueCreate(QUEUE_LENGTH_, QUEUE_ITEM_SIZE_);
+    hao->hqueue = priority_queue_create(QUEUE_LENGTH_);
     while (NULL == hao->hqueue)
     {
         // error
     }
 
-    // Set port and pin for led
-    hao->led_port = led_port;
-    hao->led_pin  = led_pin;
-
     BaseType_t status;
-    status = xTaskCreate(task_led, "task_ao_led", 128, (void * const)hao, tskIDLE_PRIORITY + 1, NULL);
+    status = xTaskCreate(task_led, "task_ao_led", 256, (void * const)hao, tskIDLE_PRIORITY + 1, NULL);
     while (pdPASS != status)
     {
         // error

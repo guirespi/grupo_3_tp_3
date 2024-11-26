@@ -45,6 +45,7 @@ extern "C" {
 #include <stdint.h>
 #include "board.h"
 #include "cmsis_os.h"
+#include "driver_priority_queue.h"
 
 /********************** macros ***********************************************/
 
@@ -52,24 +53,23 @@ extern "C" {
 
 typedef enum
 {
-  AO_LED_MESSAGE_ON,
+  AO_LED_MESSAGE_ON = 0,
   AO_LED_MESSAGE_OFF,
-  AO_LED_MESSAGE_BLINK,
-  AO_LED_MESSAGE__N,
+  AO_LED_MESSAGE_LONG,
+  AO_LED_MESSAGE_SHORT,
+  AO_LED_MESSAGE_PULSE,
 } ao_led_message_t;
 
 typedef struct
 {
-    QueueHandle_t hqueue;
-    GPIO_TypeDef * led_port;
-    uint16_t led_pin;
+    priority_queue_t hqueue;
 } ao_led_handle_t;
 
 /********************** external data declaration ****************************/
 
 /********************** external functions declaration ***********************/
 
-void ao_led_init(ao_led_handle_t* hao, GPIO_TypeDef * led_port, uint16_t led_pin);
+void ao_led_init(ao_led_handle_t* hao);
 
 bool ao_led_send(ao_led_handle_t* hao, ao_led_message_t msg);
 
