@@ -1,9 +1,10 @@
 /*
  * driver_priority_queue.c
  *
- *  Created on: Nov 24, 2024
- *      Author: guirespi
+ *  Created on: Nov 27, 2024
+ *      Author: rpalma
  */
+
 #include "driver_priority_queue.h"
 
 #include <stdio.h>
@@ -11,120 +12,72 @@
 #include <stdlib.h>
 #include <cmsis_os.h>
 
-// Structure to represent a priority queue
-struct priority_queue_t {
-    int * array; /**< Array of elements with of integer size */
-    unsigned int size; /**< Actual size of the priority queue */
-    unsigned int capacity; /**< Capacity of priority queue */
-};
+#include <stdio.h>
+#include <stdlib.h>
 
-static void swap(int* a, int* b);
-static void heapify(priority_queue_t heap, unsigned int i);
 
-// Function to swap two integers
-static void swap(int* a, int* b)
+// Función para crear una cola de prioridad
+struct priority_queue_t* priority_queue_create(void)
 {
-    int temp = *a;
-    *a = *b;
-    *b = temp;
-}
-
-// Function to heapify the node at index i
-static void heapify(priority_queue_t heap, unsigned int i)
-{
-    int largest = i;
-    int left = 2 * i + 1;
-    int right = 2 * i + 2;
-
-    if (left < heap->size
-        && heap->array[left] > heap->array[largest])
-        largest = left;
-
-    if (right < heap->size
-        && heap->array[right] > heap->array[largest])
-        largest = right;
-
-    if (largest != i) {
-        swap(&heap->array[i], &heap->array[largest]);
-        heapify(heap, largest);
-    }
-}
-
-// Function to create a heap
-priority_queue_t priority_queue_create(unsigned int capacity)
-{
-    priority_queue_t p_queue = (priority_queue_t)malloc(sizeof(*p_queue));
-    p_queue->size = 0;
-    p_queue->capacity = capacity;
-
-    p_queue->array = (int*)malloc(capacity * sizeof(*p_queue->array));
+    struct priority_queue_t* p_queue = (struct priority_queue_t*)malloc(sizeof(struct priority_queue_t));
+    p_queue->head = NULL;
     return p_queue;
 }
 
-// Function to insert a new value into the heap
-bool priority_queue_send(priority_queue_t heap, int value)
+// Función para insertar un valor en la cola de prioridad
+bool priority_queue_send(struct priority_queue_t* heap, int value)
 {
-    if (heap->size == heap->capacity) {
-        printf("priority_queue_t overflow. Value is lost\n");
-        return false;
+    struct node* new_node = (struct node*)malloc(sizeof(struct node));
+    new_node->value = value;
+    new_node->next = NULL;
+
+    // Si la lista está vacía, el nuevo nodo será el primero
+    if (heap->head == NULL || heap->head->value < value) {
+        new_node->next = heap->head;
+        heap->head = new_node;
+        return true;
     }
 
-    taskENTER_CRITICAL();
-
-    heap->size++;
-    int i = heap->size - 1;
-    heap->array[i] = value;
-
-    // Fix the heap property if it is violated
-    while (i != 0
-           && heap->array[(i - 1) / 2] < heap->array[i]) {
-        swap(&heap->array[i], &heap->array[(i - 1) / 2]);
-        i = (i - 1) / 2;
+    // Buscar la posición correcta para insertar el nuevo nodo
+    struct node* current = heap->head;
+    while (current->next != NULL && current->next->value >= value) {
+        current = current->next;
     }
 
-    taskEXIT_CRITICAL();
+    // Insertar el nuevo nodo en la posición correcta
+    new_node->next = current->next;
+    current->next = new_node;
 
     return true;
 }
 
-// Function to extract the root (maximum element)
-bool priority_queue_receive(priority_queue_t heap, int * value)
+// Función para extraer el valor de la cabeza (máximo valor)
+bool priority_queue_receive(struct priority_queue_t* heap, int* value)
 {
-	bool rt = false;
-
-    taskENTER_CRITICAL();
-
-    if (heap->size <= 0)
-    {
-        rt = false;
-    }
-    else
-    {
-		// Store the maximum value, and remove it
-		*value = heap->array[0];
-		// If the heap is just one element. We do not need to heapify, so no need to take the last element of the heap.
-		if(heap->size > 1)
-			heap->array[0] = heap->array[heap->size - 1];
-
-		// Reduce number of elements in heap.
-		heap->size--;
-
-		// If the heap is empty after the removal no need to re-arrange.
-		if(heap->size > 0)
-			heapify(heap, 0);
-
-		rt = true;
+    if (heap->head == NULL) {
+        return false;  // La lista está vacía
     }
 
-    taskEXIT_CRITICAL();
-    return rt;
+    // Obtener el valor de la cabeza
+    *value = heap->head->value;
+
+    // Mover la cabeza al siguiente nodo
+    struct node* temp = heap->head;
+    heap->head = heap->head->next;
+
+    // Liberar la memoria del nodo extraído
+    free(temp);
+
+    return true;
 }
 
-void priority_queue_print(priority_queue_t heap)
+// Función para imprimir la cola de prioridad
+void priority_queue_print(struct priority_queue_t* heap)
 {
-    taskENTER_CRITICAL();
-    for (int i = 0; i < heap->size; ++i)
-        printf("%d ", heap->array[i]);
+    struct node* current = heap->head;
+    while (current != NULL) {
+        printf("%d ", current->value);
+        current = current->next;
+    }
     printf("\n");
-    taskEXIT_CRITICAL();
 }

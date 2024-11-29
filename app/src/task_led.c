@@ -33,7 +33,6 @@
  */
 
 /********************** inclusions *******************************************/
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -66,11 +65,11 @@ static void ao_led_turn_on(GPIO_TypeDef * led_port, uint16_t led_num, uint32_t d
 {
     TickType_t       xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
-    // Turn on led
-	HAL_GPIO_WritePin(led_port, led_num, GPIO_PIN_SET);
-	// Blink until
+    // Encender el LED
+    HAL_GPIO_WritePin(led_port, led_num, GPIO_PIN_SET);
+    // Parpadeo hasta que pase el tiempo de duración
     vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(AO_LED_ON_TIME));
-    // Turn off led
+    // Apagar el LED
     HAL_GPIO_WritePin(led_port, led_num, GPIO_PIN_RESET);
 }
 
@@ -82,32 +81,36 @@ static void task_led(void *argument)
     while (true)
     {
         int temp;
-        if (true == priority_queue_receive(hao->hqueue,(int *) &temp))
+        // Recibir el mensaje de la cola de prioridad
+        if (true == priority_queue_receive(hao->hqueue, (int *)&temp))
         {
-        	ao_led_message_t msg = (ao_led_message_t) temp;
-        	uint16_t led_num = 0;
-        	GPIO_TypeDef * led_port = NULL;
+            ao_led_message_t msg = (ao_led_message_t) temp;
+            uint16_t led_num = 0;
+            GPIO_TypeDef * led_port = NULL;
+
+            // Decidir qué LED encender según el mensaje recibido
             if (AO_LED_MESSAGE_PULSE == msg)
             {
                 LOGGER_INFO("Triggered red led");
-                led_port = (GPIO_TypeDef *) LED_RED_PORT;
-                led_num =  LED_RED_PIN;
+                led_port = (GPIO_TypeDef *)LED_RED_PORT;
+                led_num = LED_RED_PIN;
             }
             if (AO_LED_MESSAGE_SHORT == msg)
             {
                 LOGGER_INFO("Triggered green led");
-                led_port = (GPIO_TypeDef *) LED_GREEN_PORT;
-                led_num =  LED_GREEN_PIN;
+                led_port = (GPIO_TypeDef *)LED_GREEN_PORT;
+                led_num = LED_GREEN_PIN;
             }
             if (AO_LED_MESSAGE_LONG == msg)
             {
                 LOGGER_INFO("Triggered blue led");
-                led_port = (GPIO_TypeDef *) LED_BLUE_PORT;
-                led_num =  LED_BLUE_PIN;
+                led_port = (GPIO_TypeDef *)LED_BLUE_PORT;
+                led_num = LED_BLUE_PIN;
             }
+
             ao_led_turn_on(led_port, led_num, AO_LED_ON_TIME);
         }
-        // As our priority queue implementation does not block. We make this blocking delay for this task.
+        // Como la implementación de la cola de prioridad no bloquea, se hace una espera bloqueante en esta tarea.
         vTaskDelay(pdMS_TO_TICKS(TASK_PERIOD_MS_));
     }
 }
@@ -116,22 +119,25 @@ static void task_led(void *argument)
 
 bool ao_led_send(ao_led_handle_t *hao, ao_led_message_t msg)
 {
+    // Enviar un mensaje a la cola de prioridad (convertir el mensaje a int)
     return (true == priority_queue_send(hao->hqueue, (int)msg));
 }
 
 void ao_led_init(ao_led_handle_t *hao)
 {
-    hao->hqueue = priority_queue_create(QUEUE_LENGTH_);
+    // Crear la cola de prioridad
+    hao->hqueue = priority_queue_create();
     while (NULL == hao->hqueue)
     {
-        // error
+        // Si la cola no se crea correctamente, el bucle sigue hasta que lo haga (en un caso real, agregar manejo de errores).
     }
 
+    // Crear la tarea para controlar el LED
     BaseType_t status;
     status = xTaskCreate(task_led, "task_ao_led", 256, (void * const)hao, tskIDLE_PRIORITY + 1, NULL);
     while (pdPASS != status)
     {
-        // error
+        // Si la tarea no se crea correctamente, el bucle sigue hasta que lo haga (en un caso real, agregar manejo de errores).
     }
 }
 

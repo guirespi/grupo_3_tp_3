@@ -1,7 +1,7 @@
 /*
  * driver_priority_queue.h
  *
- *  Created on: Nov 24, 2024
+ *  Created on: Nov 27, 2024
  *      Author: guirespi
  */
 
@@ -11,14 +11,27 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct priority_queue_t * priority_queue_t;
+// Nodo de la lista enlazada
+struct node {
+    int value;              /**< Valor del nodo */
+    struct node* next;      /**< Puntero al siguiente nodo */
+};
 
-priority_queue_t priority_queue_create(unsigned int capacity);
+// Estructura de la cola de prioridad usando lista enlazada
+struct priority_queue_t {
+    struct node* head;  /**< Cabeza de la lista enlazada */
+};
 
-bool priority_queue_send(priority_queue_t p_queue, int value);
+// Declaraciones de las funciones
 
-bool priority_queue_receive(priority_queue_t p_queue, int * value);
+struct priority_queue_t* priority_queue_create(void);
 
-void priority_queue_print(priority_queue_t p_queue);
+bool priority_queue_send(struct priority_queue_t* heap, int value);
+
+bool priority_queue_receive(struct priority_queue_t* heap, int* value);
+
+void priority_queue_print(struct priority_queue_t* heap);
+
+
 
 #endif /* INC_DRIVER_PRIORITY_QUEUE_H_ */

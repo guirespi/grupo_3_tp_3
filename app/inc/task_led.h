@@ -62,7 +62,7 @@ typedef enum
 
 typedef struct
 {
-    priority_queue_t hqueue;
+    struct priority_queue_t* hqueue;  // Puntero a la cola de prioridad implementada con lista enlazada
 } ao_led_handle_t;
 
 /********************** external data declaration ****************************/
