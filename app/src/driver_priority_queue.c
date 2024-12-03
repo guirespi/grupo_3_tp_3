@@ -15,11 +15,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
 
 // Función para crear una cola de prioridad
 struct priority_queue_t* priority_queue_create(void)
 {
-    struct priority_queue_t* p_queue = (struct priority_queue_t*)malloc(sizeof(struct priority_queue_t));
+    struct priority_queue_t* p_queue = (struct priority_queue_t*)pvPortMalloc(sizeof(struct priority_queue_t));
     p_queue->head = NULL;
     return p_queue;
 }
@@ -27,7 +29,7 @@ struct priority_queue_t* priority_queue_create(void)
 // Función para insertar un valor en la cola de prioridad
 bool priority_queue_send(struct priority_queue_t* heap, int value)
 {
-    struct node* new_node = (struct node*)malloc(sizeof(struct node));
+    struct node* new_node = (struct node*)pvPortMalloc(sizeof(struct node));
     new_node->value = value;
     new_node->next = NULL;
 
@@ -66,7 +68,7 @@ bool priority_queue_receive(struct priority_queue_t* heap, int* value)
     heap->head = heap->head->next;
 
     // Liberar la memoria del nodo extraído
-    free(temp);
+    vPortFree(temp);
 
     return true;
 }
