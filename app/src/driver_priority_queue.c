@@ -29,6 +29,7 @@ struct priority_queue_t* priority_queue_create(void)
 // Función para insertar un valor en la cola de prioridad
 bool priority_queue_send(struct priority_queue_t* heap, int value)
 {
+    taskENTER_CRITICAL();
     struct node* new_node = (struct node*)pvPortMalloc(sizeof(struct node));
     new_node->value = value;
     new_node->next = NULL;
@@ -50,6 +51,7 @@ bool priority_queue_send(struct priority_queue_t* heap, int value)
     new_node->next = current->next;
     current->next = new_node;
 
+    taskEXIT_CRITICAL();
     return true;
 }
 
@@ -60,6 +62,7 @@ bool priority_queue_receive(struct priority_queue_t* heap, int* value)
         return false;  // La lista está vacía
     }
 
+    taskENTER_CRITICAL();
     // Obtener el valor de la cabeza
     *value = heap->head->value;
 
@@ -69,7 +72,7 @@ bool priority_queue_receive(struct priority_queue_t* heap, int* value)
 
     // Liberar la memoria del nodo extraído
     vPortFree(temp);
-
+    taskEXIT_CRITICAL();
     return true;
 }
 
@@ -77,9 +80,11 @@ bool priority_queue_receive(struct priority_queue_t* heap, int* value)
 void priority_queue_print(struct priority_queue_t* heap)
 {
     struct node* current = heap->head;
+    taskENTER_CRITICAL();
     while (current != NULL) {
         printf("%d ", current->value);
         current = current->next;
     }
+    taskEXIT_CRITICAL();
     printf("\n");
 }
